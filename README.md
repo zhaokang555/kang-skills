@@ -2,6 +2,8 @@
 
 A collection of Claude Code skills for developer workflows.
 
+[中文](#中文)
+
 ## Skills
 
 ### weekly-report
@@ -71,3 +73,79 @@ Add to your project's `.claude/settings.json`:
 2. Collects commits for the target week by the current git user
 3. Uses Claude to generate a natural-language Chinese report
 4. Writes to `YYYY/MM/YYYY-MM-DD-weekly-report.md` and commits
+
+---
+
+## 中文
+
+面向开发者工作流的 Claude Code Skills 合集。
+
+### Skills
+
+#### weekly-report
+
+从多个 git 仓库的提交记录自动生成中文周报，并提交到你的工作日志仓库。
+
+**用法**：`/weekly-report [YYYY-MM-DD]`
+- 不带参数：生成上周周报
+- 带参数：生成以该周日结尾的那一周的周报
+
+### 安装
+
+**方式一：npx skills（推荐）**
+
+```bash
+npx skills add kangzhao/kang-skills
+```
+
+**方式二：手动复制**
+
+```bash
+cp -r skills/weekly-report .claude/skills/
+```
+
+然后配置：
+
+```bash
+cp .claude/skills/weekly-report/config.example.json \
+   .claude/skills/weekly-report/config.json
+```
+
+编辑 `config.json`：
+
+```json
+{
+  "scanDir": "/path/to/your/repos",
+  "jiraBaseUrl": "https://yourcompany.atlassian.net/browse"
+}
+```
+
+> `config.json` 已加入 `.gitignore`，个人路径不会被提交。
+
+### 所需权限
+
+在项目的 `.claude/settings.json` 中添加：
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git log:*)",
+      "Bash(git config:*)",
+      "Bash(git show:*)",
+      "Bash(git -C:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "Bash(node:*)"
+    ]
+  }
+}
+```
+
+### 工作原理
+
+1. 扫描 `scanDir` 下所有 git 仓库（最大深度 3）
+2. 收集当前 git 用户在目标周内的所有提交
+3. 由 Claude 生成自然语言中文周报
+4. 写入 `YYYY/MM/YYYY-MM-DD-weekly-report.md` 并提交
