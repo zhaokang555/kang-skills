@@ -18,8 +18,16 @@ Automatically generate a Chinese weekly work report from git commit history acro
 
 ### Option 1: npx skills (recommended)
 
+Install all skills:
+
 ```bash
-npx skills add kangzhao/kang-skills
+npx skills add zhaokang555/kang-skills
+```
+
+Install a single skill:
+
+```bash
+npx skills add zhaokang555/kang-skills --skill weekly-report
 ```
 
 ### Option 2: manual
@@ -94,8 +102,16 @@ Add to your project's `.claude/settings.json`:
 
 **方式一：npx skills（推荐）**
 
+安装全部 skills：
+
 ```bash
-npx skills add kangzhao/kang-skills
+npx skills add zhaokang555/kang-skills
+```
+
+单独安装某个 skill：
+
+```bash
+npx skills add zhaokang555/kang-skills --skill weekly-report
 ```
 
 **方式二：手动复制**
