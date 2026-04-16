@@ -1,9 +1,0 @@
-{
-  "plugins": [
-    {
-      "name": "kang-skills",
-      "source": "kang-skills",
-      "skills": ["./skills/weekly-report"]
-    }
-  ]
-}
