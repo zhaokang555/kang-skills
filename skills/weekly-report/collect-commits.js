@@ -16,7 +16,7 @@ function run(cmd) {
 }
 
 // Find all git repos (maxdepth 3)
-const repos = run(`find ${BASE_DIR} -maxdepth 3 -name ".git" -type d -prune`)
+const repos = run(`find "${BASE_DIR}" -maxdepth 3 -name ".git" -type d -prune`)
   .split('\n')
   .filter(Boolean)
   .map(p => p.replace('/.git', ''));
@@ -43,8 +43,11 @@ for (const repo of repos) {
     if (isSubjectOnly) {
       console.log('--- STAT ---');
       // --format="" suppresses commit header, leaving only file change list
-      const stat = run(`git -C "${repo}" show --stat --format="" ${hash}`)
-        .split('\n').slice(0, 20).join('\n');
+      const lines = run(`git -C "${repo}" show --stat --format="" ${hash}`)
+        .split('\n').filter(Boolean);
+      const stat = lines.length <= 20
+        ? lines.join('\n')
+        : [...lines.slice(0, 19), lines[lines.length - 1]].join('\n');
       console.log(stat);
     }
   }
