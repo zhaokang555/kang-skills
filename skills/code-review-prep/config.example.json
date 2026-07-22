@@ -1,0 +1,4 @@
+{
+  "scanDir": "/path/to/your/repos",
+  "jiraBaseUrl": "https://yourcompany.atlassian.net/browse"
+}
