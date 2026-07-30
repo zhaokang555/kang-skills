@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 // collect-commits-range.js <START_DATE YYYY-MM-DD> <END_DATE YYYY-MM-DD> <AUTHOR_EMAIL>
-// Unlike weekly-report's collect-commits.js, this always emits the full diff
-// for every commit — the generated report renders it with diff2html, and
-// risk/impact judgment needs the actual code change, not just the
-// (AI-written) commit message describing it.
+// Emits repo + commit metadata only (no diff) — per-story diffs are
+// generated later by merge-story-diff.js, which is what the report is
+// actually rendered from.
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -46,12 +45,9 @@ for (const repo of repos) {
 
   for (const hash of hashes) {
     const fullMessage = run(`git -C "${repo}" log -1 --format="%B" ${hash}`);
-    const diff = run(`git -C "${repo}" show --format="" ${hash}`);
 
     console.log(`--- COMMIT ${hash} ---`);
     console.log(fullMessage);
-    console.log('--- DIFF ---');
-    console.log(diff);
   }
 
   console.log(`=== END REPO ===`);
