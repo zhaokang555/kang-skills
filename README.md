@@ -122,6 +122,15 @@ Edit `config.json`:
 
 > `config.json` is gitignored — your personal paths won't be committed.
 
+Optionally, list product/business terms that should stay in English when the report is translated to Chinese:
+
+```bash
+cp .claude/skills/code-review-prep/no-translate.example.json \
+   .claude/skills/code-review-prep/no-translate.json
+```
+
+> `no-translate.json` is gitignored too — it's your own product terminology, not something to publish.
+
 #### Required permissions
 
 Add to your project's `.claude/settings.json`:
@@ -144,11 +153,15 @@ Add to your project's `.claude/settings.json`:
 
 #### How it works
 
-1. Collects your commits and full diffs across all git repos under `scanDir` for the date range
-2. Groups commits by Jira issue key and looks up each issue's context via `mcp-atlassian`
-3. Merges each issue's commits into one clean diff per repo, using a throwaway git worktree
-4. Renders a review-ready HTML report — business-narrative summaries per issue, with collapsible diff2html diffs
-5. Doesn't commit anything — this is meeting-prep material, not a work log
+1. Collects your commit metadata (no diffs yet) across all git repos under `scanDir` for the date range
+2. Looks up each commit's Jira issue context via `mcp-atlassian`
+3. Groups commits by Jira issue key and writes an English business narrative for each, inspecting `git show` on demand when a commit message alone isn't clear enough
+4. Merges each issue's commits into one clean diff per repo using a throwaway git worktree (falls back to per-commit diffs on cherry-pick conflicts)
+5. Translates the narrative to Chinese, keeping any terms listed in `no-translate.json` in English
+6. Renders a review-ready HTML report with collapsible diff2html diffs
+7. Doesn't commit anything — this is meeting-prep material, not a work log
+
+Steps 3-7 each run in their own subagent, reading/writing files on disk — the raw diffs, Jira context, and draft narrative never enter the main conversation's context.
 
 ---
 
@@ -274,6 +287,15 @@ cp .claude/skills/code-review-prep/config.example.json \
 
 > `config.json` 已加入 `.gitignore`，个人路径不会被提交。
 
+可选：配置翻译成中文时需要保留英文原文的产品/业务术语列表：
+
+```bash
+cp .claude/skills/code-review-prep/no-translate.example.json \
+   .claude/skills/code-review-prep/no-translate.json
+```
+
+> `no-translate.json` 也已加入 `.gitignore`——这是你自己的产品术语，不适合公开发布。
+
 ##### 所需权限
 
 在项目的 `.claude/settings.json` 中添加：
@@ -296,8 +318,12 @@ cp .claude/skills/code-review-prep/config.example.json \
 
 ##### 工作原理
 
-1. 采集 `scanDir` 下所有 git 仓库在该日期范围内本人的提交和完整 diff
-2. 按 Jira 编号给 commit 分组，用 `mcp-atlassian` 查询每个编号对应的背景上下文
-3. 用一次性的 git worktree，把每个需求下的 commit 合并成一份干净的 diff
-4. 渲染出一份可用于会前的 HTML 报告——按需求分组的业务视角叙事，配可折叠的 diff2html diff
-5. 不做任何提交——这是会前准备材料，不是工作日志
+1. 采集 `scanDir` 下所有 git 仓库在该日期范围内本人的提交元信息（不含 diff）
+2. 用 `mcp-atlassian` 查询每条 commit 对应 Jira 编号的背景上下文
+3. 按 Jira 编号给 commit 分组，为每组撰写英文业务叙事；commit message 描述不清楚时按需用 `git show` 查看实际 diff
+4. 用一次性的 git worktree，把每个需求下的 commit 合并成一份干净的 diff（cherry-pick 冲突时自动回退为按 commit 拼接）
+5. 把叙事翻译成中文，`no-translate.json` 里列出的词保持英文不译
+6. 渲染出一份可用于会前的 HTML 报告，配可折叠的 diff2html diff
+7. 不做任何提交——这是会前准备材料，不是工作日志
+
+第 3-7 步都跑在各自独立的 subagent 里，输入输出走文件——原始 diff、Jira 上下文、英文叙事草稿都不会进入主对话的上下文。
