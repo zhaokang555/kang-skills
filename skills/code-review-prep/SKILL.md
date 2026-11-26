@@ -52,11 +52,11 @@ node .claude/skills/code-review-prep/collect-commits-range.js <START_DATE> <END_
 
 ### 4. 查询 Jira 上下文
 
-启动一个 subagent 执行：读取 `<RUN_DIR>/commits.txt`，从每条 commit message 中提取 Jira 编号（形如 `TO-1234`）并去重，用 jira skill（`mcp-atlassian`）逐个查询标题/描述作为背景上下文；查询失败的编号跳过，不阻断整体流程。把结果写入 `<RUN_DIR>/jira-context.json`：
+启动一个 subagent 执行：读取 `<RUN_DIR>/commits.txt`，从每条 commit message 中提取 Jira 编号（形如 `TO-1234`）并去重，通过 twg skill（`twg-jira`）逐个查询 Jira workitem 作为背景上下文。对每个编号运行 `twg jira workitem get <KEY> --comments -o json`，从结果中提取 summary、description 和完整 comments，分别写入 title、description 和 comments；查询失败的编号跳过，不阻断整体流程。把结果写入 `<RUN_DIR>/jira-context.json`：
 
 ```json
 {
-  "TO-1234": { "title": "...", "description": "..." }
+  "TO-1234": { "title": "...", "description": "...", "comments": ["...", "..."] }
 }
 ```
 

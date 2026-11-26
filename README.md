@@ -84,7 +84,7 @@ Add to your project's `.claude/settings.json`:
 
 Generate an HTML report of your own coding activity over a date range, grouped by Jira issue and written from a business perspective, for use ahead of a code review meeting. Each diff is rendered inline via diff2html (collapsed by default, expandable in place) so reviewers don't need to jump to GitHub to see the real comparison.
 
-> Requires an `mcp-atlassian` MCP server configured — it's used to fetch each Jira issue's title/description as narrative context.
+> Requires the TWG CLI (`twg`) installed and authenticated — it's used to fetch each Jira issue's title, description and comments as narrative context.
 
 **Usage**: `/code-review-prep [START_DATE]`
 - No argument: only today
@@ -154,7 +154,7 @@ Add to your project's `.claude/settings.json`:
 #### How it works
 
 1. Collects your commit metadata (no diffs yet) across all git repos under `scanDir` for the date range
-2. Looks up each commit's Jira issue context via `mcp-atlassian`
+2. Looks up each commit's Jira issue context (title, description, comments) via `twg`
 3. Groups commits by Jira issue key and writes an English business narrative for each, inspecting `git show` on demand when a commit message alone isn't clear enough
 4. Merges each issue's commits into one clean diff per repo using a throwaway git worktree (falls back to per-commit diffs on cherry-pick conflicts)
 5. Translates the narrative to Chinese, keeping any terms listed in `no-translate.json` in English
@@ -249,7 +249,7 @@ cp .claude/skills/weekly-report/config.example.json \
 
 生成本人一段时间内的编码情况说明，按 Jira 需求分组、业务视角叙事，用于代码 review 会议前的准备。diff 用 diff2html 直接渲染在页面里（默认收起，点击原地展开），不需要跳转到 GitHub 就能看到真正的对比视图。
 
-> 需要配置好 `mcp-atlassian` MCP 服务器——用于查询 commit 中提到的 Jira 编号对应的标题/描述，作为叙事的背景上下文。
+> 需要安装并登录 TWG CLI（`twg`）——用于查询 commit 中提到的 Jira 编号对应的标题、描述和评论，作为叙事的背景上下文。
 
 **用法**：`/code-review-prep [START_DATE]`
 - 无参数：只看今天
@@ -319,7 +319,7 @@ cp .claude/skills/code-review-prep/no-translate.example.json \
 ##### 工作原理
 
 1. 采集 `scanDir` 下所有 git 仓库在该日期范围内本人的提交元信息（不含 diff）
-2. 用 `mcp-atlassian` 查询每条 commit 对应 Jira 编号的背景上下文
+2. 用 `twg` 查询每条 commit 对应 Jira 编号的背景上下文（标题、描述、评论）
 3. 按 Jira 编号给 commit 分组，为每组撰写英文业务叙事；commit message 描述不清楚时按需用 `git show` 查看实际 diff
 4. 用一次性的 git worktree，把每个需求下的 commit 合并成一份干净的 diff（cherry-pick 冲突时自动回退为按 commit 拼接）
 5. 把叙事翻译成中文，`no-translate.json` 里列出的词保持英文不译
