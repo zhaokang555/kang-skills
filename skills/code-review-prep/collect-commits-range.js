@@ -9,7 +9,7 @@ const path = require('path');
 
 const [startDate, endDate, author] = process.argv.slice(2);
 const { scanDir: BASE_DIR } = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '..', 'weekly-report', 'config.json'), 'utf8')
+  fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8')
 );
 
 function run(cmd) {
@@ -29,7 +29,7 @@ function githubSlug(repo) {
 const repos = run(`find "${BASE_DIR}" -maxdepth 3 -name ".git" -type d -prune`)
   .split('\n')
   .filter(Boolean)
-  .map(p => p.replace('/.git', ''));
+  .map(p => path.dirname(p));
 
 for (const repo of repos) {
   const hashes = run(
@@ -41,7 +41,7 @@ for (const repo of repos) {
   if (hashes.length === 0) continue;
 
   const slug = githubSlug(repo);
-  console.log(`=== REPO: ${path.basename(repo)}${slug ? ` (github: ${slug})` : ''} ===`);
+  console.log(`=== REPO: ${path.basename(repo)}${slug ? ` (github: ${slug})` : ''} (path: ${repo}) ===`);
 
   for (const hash of hashes) {
     const fullMessage = run(`git -C "${repo}" log -1 --format="%B" ${hash}`);

@@ -16,13 +16,13 @@
 //     title,                     // one-line summary, used in <h2> and the ToC row
 //     tocSummary,                // "做了什么", ToC row's third column
 //     repos: [{
-//       repoName, slug,          // slug is "owner/repo" (as emitted by collect-commits-range.js)
+//       repoName, slug, repoPath, // repoPath is consumed by step 6 only; slug is "owner/repo" (as emitted by collect-commits-range.js)
 //       narrativeHtml,           // LLM-authored HTML fragment (<p> paragraphs, may include <a>/<strong>), embedded verbatim
 //       diffFile, mode,          // mode: SINGLE | MERGED | FALLBACK_CONCAT (mirrors merge-story-diff.js)
 //       commits: [{ hash }],
 //     }],
 //   }],
-//   others: [{ summary, repoName, slug, diffFile, mode, commits: [{ hash }] }],  // commits with no Jira key; mode is always SINGLE
+//   others: [{ summary, repoName, slug, repoPath, diffFile, mode, commits: [{ hash }] }],  // commits with no Jira key; mode is always SINGLE
 // }
 // A story's <h3> per-repo heading is emitted only when it has more than one repo.
 // Output: code-review-prep/<startDate>[_to_<endDate>]/report.html — one folder per run, so a run's

@@ -12,8 +12,8 @@ description: 生成本人一段时间内的编码情况说明，按 Jira 需求�
 ## 配置
 
 配置文件 `.claude/skills/code-review-prep/config.json`（参考同目录下的 `config.example.json`，未加入 git 版本控制）：
-- **扫描目录**：`scanDir` 字段
-- **Jira 链接前缀**：`jiraBaseUrl` 字段
+- **扫描目录**：`scanDir` 字段（由 `collect-commits-range.js` 读取）
+- **Jira 链接前缀**：`jiraBaseUrl` 字段（由 `render-report.js` 读取）
 
 不翻译关键词表 `.claude/skills/code-review-prep/no-translate.json`（参考同目录下的 `no-translate.example.json`，未加入 git 版本控制，可直接编辑追加）：第 7 步把英文内容翻译成中文时，这份列表里的词保持英文原文不译。
 
@@ -23,7 +23,7 @@ description: 生成本人一段时间内的编码情况说明，按 Jira 需求�
 
 ### 0. 读取配置
 
-读取 `.claude/skills/code-review-prep/config.json`，取 `scanDir` 和 `jiraBaseUrl` 的值。若文件不存在，提示用户参考同目录下的 `config.example.json` 创建。
+检查 `.claude/skills/code-review-prep/config.json` 是否存在（内容由脚本自己读取，主线程不需要取值）。若文件不存在，提示用户参考同目录下的 `config.example.json` 创建并停止。
 
 ### 1. 确定日期范围
 
@@ -46,7 +46,7 @@ node .claude/skills/code-review-prep/collect-commits-range.js <START_DATE> <END_
 
 告诉 subagent：这条命令本身就是完整任务，跑完之后不需要读取/复述文件内容，只需数一下有多少个 `=== REPO:` 段落、多少条 `--- COMMIT`，回复一句话，例如"commits.txt 已写入，N 个仓库共 M 条提交"。
 
-输出结构（`commits.txt`）：每个有提交的仓库以 `=== REPO: <name> (github: <owner/repo>) ===` 开头（无 GitHub 远程时省略括号部分），每条 commit 以 `--- COMMIT <hash> ---` 分隔，后跟完整 commit message（subject + body），仓库结尾是 `=== END REPO ===`。不含 diff——diff 由第 6 步按需生成。
+输出结构（`commits.txt`）：每个有提交的仓库以 `=== REPO: <name> (github: <owner/repo>) (path: <仓库绝对路径>) ===` 开头（无 GitHub 远程时省略 `(github: ...)` 部分；`path` 总是存在，后续步骤定位仓库一律用它），每条 commit 以 `--- COMMIT <hash> ---` 分隔，后跟完整 commit message（subject + body），仓库结尾是 `=== END REPO ===`。不含 diff——diff 由第 6 步按需生成。
 
 若 subagent 回报的提交总数为 0（所有仓库均无提交），主线程直接告知用户"这段时间没有提交记录"并停止，不再进行后续步骤。
 
@@ -64,13 +64,13 @@ subagent 的最终回复只需一句话统计（例如"jira-context.json 已写�
 
 ### 5. 生成内容（英文）
 
-启动一个 subagent 执行：读取 `<RUN_DIR>/commits.txt` 和 `<RUN_DIR>/jira-context.json`，完成分组与英文叙事撰写，写入 `<RUN_DIR>/manifest.en.json`。同时告诉它第 0 步读到的 `scanDir`（用于必要时拼出 `<scanDir>/<repoName>` 查看某个 commit 的实际 diff）。
+启动一个 subagent 执行：读取 `<RUN_DIR>/commits.txt` 和 `<RUN_DIR>/jira-context.json`，完成分组与英文叙事撰写，写入 `<RUN_DIR>/manifest.en.json`。
 
 **分组单位是 Jira 需求，不是仓库**：把所有 commit 按提取到的 Jira 编号分组（同一个编号下的多条 commit，无论跨几个仓库，合并成一段完整叙事）；没有 Jira 编号的 commit 归入 `others`，逐条列出、不与任何需求合并。
 
 **需求内部按仓库分段**：如果一个需求涉及多个仓库，叙事不按 commit 时间顺序逐条讲，而是按仓库拆成几段，对应 `repos` 数组的一个元素（`<h3>仓库名</h3>` 小标题由 `render-report.js` 在 `repos.length > 1` 时自动加，不用在 `narrativeHtml` 里手写）。只涉及一个仓库的需求，`repos` 数组只有一个元素即可，脚本会自动省略小标题。
 
-**判断改动内容**：默认基于 commit message 判断；message 描述不清楚，或需要判断是否有值得一提的线索（依赖后端确认的字段、内容团队还没给最终文案、已知会影响用户体验的临时状态、修复了一个已上线的 bug 等）时，用 `git -C <scanDir>/<repoName> show <hash>` 查看该 commit 的实际 diff。读大段纯数据/翻译文本类的 diff（比如一次性新增上千行翻译 key）时不需要逐行细读，扫一眼文件名和改动规模、判断出"这是批量翻译数据"即可。
+**判断改动内容**：默认基于 commit message 判断；message 描述不清楚，或需要判断是否有值得一提的线索（依赖后端确认的字段、内容团队还没给最终文案、已知会影响用户体验的临时状态、修复了一个已上线的 bug 等）时，用 `git -C "<repoPath>" show <hash>` 查看该 commit 的实际 diff（`repoPath` 取自 commits.txt 中该仓库 REPO 行的 `path`）。读大段纯数据/翻译文本类的 diff（比如一次性新增上千行翻译 key）时不需要逐行细读，扫一眼文件名和改动规模、判断出"这是批量翻译数据"即可。
 
 **写作视角（核心要求，用英文撰写）**：正文一律用英文的业务/产品语言描述"这个需求做了什么、代码层面动了什么"，**不出现函数名、变量名、文件路径、类名等代码符号**——想看这些细节的人展开 diff 区块自己看。默认读者是没读过 diff、甚至不熟悉这块代码的同事，读完要能明白"这个需求解决了什么问题、目前做到什么程度"。
 
@@ -88,7 +88,7 @@ subagent 的最终回复只需一句话统计（例如"jira-context.json 已写�
       "jiraKey": "TO-1234", "title": "One-line summary of the story", "tocSummary": "What was done, for the ToC table's third column",
       "repos": [
         {
-          "repoName": "my-web-app", "slug": "<owner>/<repo>",
+          "repoName": "my-web-app", "slug": "<owner>/<repo>", "repoPath": "<REPO 行的 path>",
           "narrativeHtml": "<p>...business narrative in English for this repo...</p>",
           "commits": [{ "hash": "<full hash1>" }, { "hash": "<full hash2>" }]
         }
@@ -97,12 +97,14 @@ subagent 的最终回复只需一句话统计（例如"jira-context.json 已写�
   ],
   "others": [
     {
-      "summary": "One-line summary in English", "repoName": "...", "slug": "...",
+      "summary": "One-line summary in English", "repoName": "...", "slug": "...", "repoPath": "...",
       "commits": [{ "hash": "..." }]
     }
   ]
 }
 ```
+
+`repoPath` 必须从 commits.txt 对应 REPO 行的 `path` 原样抄写，不要自己拼接（同名仓库可能位于不同目录，以 `path` 区分）。
 
 `narrativeHtml` 里可以用 `<a>`/`<strong>` 等行内标签，脚本原样嵌入不做二次转义。
 
@@ -114,13 +116,13 @@ subagent 的最终回复只需一句话统计（例如"jira-context.json 已写�
 
 ### 6. 生成合并 diff，回填 manifest
 
-启动一个 subagent 执行：读取 `<RUN_DIR>/manifest.en.json`，对每个 story 的每个 repo 条目、以及每条 `others` 条目，按里面列出的 commit hash 生成 diff 并落盘，然后把 `diffFile`/`mode` 字段直接回填进 `<RUN_DIR>/manifest.en.json`（覆盖同一个文件，不新建文件）。同时告诉它第 0 步读到的 `scanDir`（用于拼出 `<scanDir>/<repoName>` 定位仓库路径）。
+启动一个 subagent 执行：读取 `<RUN_DIR>/manifest.en.json`，对每个 story 的每个 repo 条目、以及每条 `others` 条目，按里面列出的 commit hash 生成 diff 并落盘，然后把 `diffFile`/`mode` 字段直接回填进 `<RUN_DIR>/manifest.en.json`（覆盖同一个文件，不新建文件）。仓库路径一律用条目里的 `repoPath` 字段。
 
 对 `stories` 里的 repo 条目（`code-review-prep/` 已加入 `.gitignore`，中转文件不需要清理）：
 
 ```bash
 mkdir -p <RUN_DIR>/diffs
-node .claude/skills/code-review-prep/merge-story-diff.js <repo路径> <hash1> <hash2> ... > <RUN_DIR>/diffs/<story>-<repo>.diff
+node .claude/skills/code-review-prep/merge-story-diff.js "<repoPath>" <hash1> <hash2> ... > <RUN_DIR>/diffs/<story>-<repo>.diff
 ```
 
 hash 顺序不重要，脚本自己按 commit 时间排序；只有 1 个 commit 时也可以直接传，脚本会走单 commit 快路径。脚本内部处理 worktree 创建/cherry-pick/合并 diff/清理全过程（含 cherry-pick 冲突时的回退拼接），全程不接触用户实际的工作目录。
@@ -133,14 +135,14 @@ hash 顺序不重要，脚本自己按 commit 时间排序；只有 1 个 commit
 对 `others` 里的条目（每条独立、不与其他 commit 合并），`mode` 固定填 `SINGLE`：
 
 ```bash
-git -C <repo路径> show --format="" <hash> > <RUN_DIR>/diffs/others-<repo>-<短hash>.diff
+git -C "<repoPath>" show --format="" <hash> > <RUN_DIR>/diffs/others-<repo>-<短hash>.diff
 ```
 
 `diffFile` 字段填对应生成的文件路径。subagent 的最终回复只需一句话统计（例如"N 个 diff 已生成，manifest.en.json 已回填"），不把 diff 内容复述在回复里。
 
 ### 7. 翻译成中文，生成报告
 
-启动一个 subagent 执行：读取 `.claude/skills/code-review-prep/no-translate.json`（不翻译关键词列表）和 `<RUN_DIR>/manifest.en.json`，把 `title`/`tocSummary`/`narrativeHtml`/`summary` 这几类正文字段从英文翻译成中文；翻译时列表里出现的词（不区分大小写，只要能识别是同一个词）保持英文原文不译。其余结构字段（`jiraKey`、`repoName`、`slug`、`diffFile`、`mode`、`commits`、`startDate`、`endDate`）原样保留。把结果写入**新文件** `<RUN_DIR>/manifest.json`（不修改 `manifest.en.json`）。
+启动一个 subagent 执行：读取 `.claude/skills/code-review-prep/no-translate.json`（不翻译关键词列表）和 `<RUN_DIR>/manifest.en.json`，把 `title`/`tocSummary`/`narrativeHtml`/`summary` 这几类正文字段从英文翻译成中文；翻译时列表里出现的词（不区分大小写，只要能识别是同一个词）保持英文原文不译。其余结构字段（`jiraKey`、`repoName`、`slug`、`repoPath`、`diffFile`、`mode`、`commits`、`startDate`、`endDate`）原样保留。把结果写入**新文件** `<RUN_DIR>/manifest.json`（不修改 `manifest.en.json`）。
 
 写完后紧接着跑：
 
